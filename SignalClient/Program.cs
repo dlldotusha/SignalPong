@@ -3,16 +3,17 @@ using System.Threading;
 
 //Сделаю систему с хвостом змейки через структуру в массиве. запишу сюда что бы не забыть.
 ///В каком расстоянии от головы змейки в какую сторону находится следующий поворот хвоста. И так пока расстояние не станет 0, то есть хвост закончится. Чуть медленнее чем Queue<> мб, но не надо париться.
-//Ладно, нет, сделаю сейчас через очередь. Дальше буду проблемы с маштабированием поля в мультиплеере решать.
+//Ладно, нет, сделаю сейчас через очередь. Дальше буду проблемы с маштабированием поля в мультиплеере.
 public class Program
 {
     static Random rand = new Random(); //зачем это писать я так и не выяснил. но все так делают значит и я буду
     static int PlayerX = 0;
     static int PlayerY = 0;
-    static int MaxX = 4;
-    static int MaxY = 4;
-    static int MinX = -4;
-    static int MinY = -4;
+    static int MaxX = 32;
+    static int MaxY = 16;
+    static int MinX = -32;
+    static int MinY = -16;
+    static int SnakeLength = 1; //мб пригодится
     //"?" для null в координатах еды - когда еды нет на карте
     static int? EatX = null;
     static int? EatY = null;
@@ -34,6 +35,10 @@ public class Program
     {
         snake.Enqueue(new GameObject(PlayerX, PlayerY));
     }
+    static void DequeueSnake()
+    {
+        snake.Dequeue();
+    }
 
     //Рендер консоли
     public static void Render(int PlayerX, int PlayerY, int MaxX, int MaxY, int MinX, int MinY)
@@ -44,7 +49,7 @@ public class Program
         {
             for (int X = MinX; X <= MaxX; X++)
             {
-                if(snake.Any(p => p.X == X && p.Y == Y))
+                if (snake.Any(p => p.X == X && p.Y == Y))
                 {
                     if (X == PlayerX && Y == PlayerY)
                     {
@@ -57,7 +62,7 @@ public class Program
                         Console.Write(" □");
                     }
                 }
-                else if(X == EatX && Y == EatY)
+                else if (X == EatX && Y == EatY)
                 {
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.Write(" ■");
@@ -104,10 +109,10 @@ public class Program
         {
             EatX = rand.Next(MinX, MaxX);
             EatY = rand.Next(MinY, MaxY);
-            if (snake.Any(p => p.X == EatX && p.Y == EatY) || (EatX==0 && EatY==0))
+            if (snake.Any(p => p.X == EatX && p.Y == EatY) || (EatX == 0 && EatY == 0))
             {
                 EatX = null;
-                EatY = null ;
+                EatY = null;
                 ToEat = 0;
             }
         }
@@ -117,24 +122,29 @@ public class Program
     {
         if (PlayerX == EatX && PlayerY == EatY)
         {
-            EatX=null;
-            EatY=null;
+            EnqueueSnake();
+            EatX = null;
+            EatY = null;
             ToEat = 0;
         }
     }
     public static void Update()
     {
+        EnqueueSnake();
+        DequeueSnake();
         Eating();
         SpawnEat();
         Render(PlayerX, PlayerY, MaxX, MaxY, MinX, MinY);
         Move();
-        EnqueueSnake();
-        Thread.Sleep(500); //"1000/60 получается 16,(6). Игра расчитана на 60 фпс" - могли бы мы так сказать, но передвижение слишком быстрое, тикрейт будет 5 так что 1000/2=500
+        Thread.Sleep(100); //тикрейт 10
 
     }
     public static void Main()
     {
+        EnqueueSnake();
         Console.OutputEncoding = System.Text.Encoding.UTF8;
+        Console.CursorVisible = false;
+        Console.Clear();
         Task.Run(() => InputReader());
         while (true)
         {
