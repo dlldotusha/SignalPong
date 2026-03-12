@@ -1,1 +1,8 @@
-<Solution />
+<Solution>
+  <Project Path="SigalServer/SigalServer.csproj">
+    <BuildType Project="Debug" />
+  </Project>
+  <Project Path="SignalClient/SignalClient.csproj">
+    <BuildType Project="Debug" />
+  </Project>
+</Solution>
