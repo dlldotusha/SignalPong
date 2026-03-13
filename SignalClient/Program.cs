@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading;
+using System.Xml.Linq;
 
 //Сделаю систему с хвостом змейки через структуру в массиве. запишу сюда что бы не забыть.
 ///В каком расстоянии от головы змейки в какую сторону находится следующий поворот хвоста. И так пока расстояние не станет 0, то есть хвост закончится. Чуть медленнее чем Queue<> мб, но не надо париться.
@@ -18,8 +19,9 @@ public class Program
     static int? EatX = null;
     static int? EatY = null;
     static byte ToEat = 0;
+    static ConsoleKey BeforeCurrentKey = ConsoleKey.S;
 
-    static ConsoleKey currentKey = ConsoleKey.W;
+    static ConsoleKey CurrentKey = ConsoleKey.W;
     struct GameObject
     {
         public int X;
@@ -39,7 +41,18 @@ public class Program
     {
         snake.Dequeue();
     }
-
+    public static int ConvertScreen(int pos, int min, int max)
+    {
+        if (pos > max)
+        {
+            return min;
+        }
+        if (pos < min)
+        {
+            return max;
+        }
+        return pos;
+    }
     //Рендер консоли
     public static void Render(int PlayerX, int PlayerY, int MaxX, int MaxY, int MinX, int MinY)
     {
@@ -81,31 +94,35 @@ public class Program
     {
         while (true)
         {
-            currentKey = Console.ReadKey(true).Key;
+            CurrentKey = Console.ReadKey(true).Key;
             Thread.Sleep(1); //Чтобы не нагружать систему
         }
     }
     public static void Move()
     {
-        switch (currentKey)
+        //Запрет на движение в противоположную сторону
+        if ((CurrentKey == ConsoleKey.W && BeforeCurrentKey == ConsoleKey.S) || (CurrentKey == ConsoleKey.S && BeforeCurrentKey == ConsoleKey.W) || (CurrentKey == ConsoleKey.A && BeforeCurrentKey == ConsoleKey.D) || (CurrentKey == ConsoleKey.D && BeforeCurrentKey == ConsoleKey.A))
+        {
+            CurrentKey = BeforeCurrentKey;
+        }
+        switch (CurrentKey)
         {
             case ConsoleKey.W:
-                PlayerY = Math.Clamp(PlayerY - 1, MinY, MaxY);
-                break;
+                PlayerY--; break;
             case ConsoleKey.S:
-                PlayerY = Math.Clamp(PlayerY + 1, MinY, MaxY);
-                break;
+                PlayerY++; break;
             case ConsoleKey.A:
-                PlayerX = Math.Clamp(PlayerX - 1, MinX, MaxX);
-                break;
+                PlayerX--; break;
             case ConsoleKey.D:
-                PlayerX = Math.Clamp(PlayerX + 1, MinX, MaxX);
-                break;
+                PlayerX++; break;
         }
+        PlayerX = ConvertScreen(PlayerX, MinX, MaxX);
+        PlayerY = ConvertScreen(PlayerY, MinY, MaxY);
+        BeforeCurrentKey = CurrentKey;
     }
     public static void SpawnEat()
     {
-        if (ToEat == 5)
+        if (ToEat == snake.Count())
         {
             EatX = rand.Next(MinX, MaxX);
             EatY = rand.Next(MinY, MaxY);
@@ -128,6 +145,16 @@ public class Program
             ToEat = 0;
         }
     }
+    static void SnakeCollision()
+    {
+        if(snake.Any(p => p.X == PlayerX && p.Y == PlayerY))
+        {
+            Console.Clear();
+            Console.SetCursorPosition(0, 0);
+            Console.WriteLine("Game Over!");
+            Environment.Exit(0);
+        }
+    }
     public static void Update()
     {
         EnqueueSnake();
@@ -136,6 +163,7 @@ public class Program
         SpawnEat();
         Render(PlayerX, PlayerY, MaxX, MaxY, MinX, MinY);
         Move();
+        SnakeCollision();
         Thread.Sleep(100); //тикрейт 10
 
     }
