@@ -1,10 +1,7 @@
-﻿using System.Linq;
+﻿using Microsoft.AspNetCore.SignalR.Client;
+using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
-
-//Сделаю систему с хвостом змейки через структуру в массиве. запишу сюда что бы не забыть.
-///В каком расстоянии от головы змейки в какую сторону находится следующий поворот хвоста. И так пока расстояние не станет 0, то есть хвост закончится. Чуть медленнее чем Queue<> мб, но не надо париться.
-//Ладно, нет, сделаю сейчас через очередь. Дальше буду проблемы с маштабированием поля в мультиплеере.
 public class Program
 {
     static Random rand = new Random(); //зачем это писать я так и не выяснил. но все так делают значит и я буду
@@ -20,6 +17,7 @@ public class Program
     static int? EatY = null;
     static byte ToEat = 0;
     static ConsoleKey BeforeCurrentKey = ConsoleKey.S;
+    static int? returnable = null;
 
     static ConsoleKey CurrentKey = ConsoleKey.W;
     struct GameObject
@@ -90,14 +88,14 @@ public class Program
             Console.Write("\n");
         }
     }
-    static void InputReader()
-    {
-        while (true)
-        {
-            CurrentKey = Console.ReadKey(true).Key;
-            Thread.Sleep(1); //Чтобы не нагружать систему
-        }
-    }
+    //public static void InputReader()
+    //{
+    //    while (true)
+    //    {
+    //        CurrentKey = Console.ReadKey(true).Key;
+    //        Thread.Sleep(1); //Чтобы не нагружать систему
+    //    }
+    //}
     public static void Move()
     {
         //Запрет на движение в противоположную сторону
@@ -147,7 +145,7 @@ public class Program
     }
     static void SnakeCollision()
     {
-        if(snake.Any(p => p.X == PlayerX && p.Y == PlayerY))
+        if (snake.Any(p => p.X == PlayerX && p.Y == PlayerY))
         {
             Console.Clear();
             Console.SetCursorPosition(0, 0);
@@ -167,13 +165,35 @@ public class Program
         Thread.Sleep(100); //тикрейт 10
 
     }
-    public static void Main()
+    public async static Task SendInputToServer()
     {
+        while (true)
+        {
+            BeforeCurrentKey = CurrentKey;
+            CurrentKey = Console.ReadKey(true).Key;
+            if (CurrentKey != BeforeCurrentKey)
+            {
+                switch (CurrentKey)
+                {
+                    case ConsoleKey.W: returnable = 0; break;
+                    case ConsoleKey.A: returnable = 1; break;
+                    case ConsoleKey.S: returnable = 2; break;
+                    case ConsoleKey.D: returnable = 3; break;
+                }
+                await ServerSender.SendAsync("SendInput", returnable);
+            }
+        }
+    }
+    public static void Main(string[] args)
+    {
+        ServerSender.StartAsync().Wait();
+        //Task.Run(() => InputReader());
+        Task.Run(() => SendInputToServer());
         EnqueueSnake();
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.CursorVisible = false;
         Console.Clear();
-        Task.Run(() => InputReader());
+
         while (true)
         {
             Update();
